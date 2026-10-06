@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>Pedidos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--tx:#14201f;--mut:#667a78;--pri:#0f766e;--onpri:#fff;--bd:#e2e8ea;--dan:#b42318;--sh:0 1px 3px rgba(0,0,0,.08)}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1514;--card:#17201f;--tx:#e8f0ef;--mut:#93a5a3;--pri:#2dd4bf;--onpri:#06312c;--bd:#26332f;--dan:#f97066;--sh:none}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+#app{min-height:100vh;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+.top{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--pri);color:var(--onpri)}
+.chip{font-size:13px;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:99px}
+main{padding:12px 16px 90px;max-width:760px;margin:0 auto}
+.tabs{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom);z-index:6}
+.tabs button{flex:1;border:0;background:none;color:var(--mut);padding:8px 2px;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tabs button span{font-size:20px}
+.tabs button.on{color:var(--pri);font-weight:600}
+input,select,textarea{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx)}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+button{font:inherit}
+.btn{border:0;background:var(--pri);color:var(--onpri);padding:11px 16px;border-radius:10px;font-weight:600}
+.btn.sec{background:transparent;color:var(--pri);border:1px solid var(--pri)}
+.btn.dan{background:transparent;color:var(--dan);border:1px solid var(--dan)}
+.btn.blk{display:block;width:100%;margin-top:10px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.btns .btn{flex:1;min-width:120px}
+.bar{display:flex;gap:8px;margin-bottom:10px;position:sticky;top:50px;z-index:4;background:var(--bg);padding:4px 0}
+.row{display:flex;gap:10px;align-items:center;background:var(--card);border-radius:12px;padding:10px;margin-bottom:8px;box-shadow:var(--sh);border:1px solid var(--bd)}
+.row .info{flex:1;min-width:0}
+.row .info small{color:var(--mut)}
+.row .info div{overflow:hidden;text-overflow:ellipsis}
+.th{width:54px;height:54px;border-radius:8px;background:var(--bd);flex:none;object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:22px}
+img.th{display:block}
+.qty{display:flex;align-items:center;gap:4px;flex:none}
+.qty button{width:34px;height:34px;border-radius:8px;border:1px solid var(--pri);background:transparent;color:var(--pri);font-size:20px;line-height:1;padding:0}
+.qty input{width:56px;text-align:center;padding:6px 2px}
+.qty .add{width:auto;padding:0 12px;background:var(--pri);color:var(--onpri);font-size:14px;font-weight:600}
+.pri{font-weight:700}
+.sticky{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));z-index:5;padding:8px 16px;background:var(--card);border-top:1px solid var(--bd);display:flex;gap:10px;align-items:center}
+.sticky .tot{flex:1}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:760px;max-height:92vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column}
+.sh-h{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--bd)}
+.sh-h button{border:0;background:none;color:var(--tx);font-size:22px}
+.sh-b{padding:12px 16px 24px;overflow:auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px}
+.muted{color:var(--mut);font-size:14px}
+.toast{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;z-index:50;max-width:90vw;text-align:center}
+.login{max-width:380px;margin:12vh auto;padding:0 20px}
+.login h1{color:var(--pri)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{border-bottom:1px solid var(--bd);padding:4px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pv{max-width:100%;max-height:160px;border-radius:8px;display:block;margin:8px 0}
+.empty{text-align:center;color:var(--mut);padding:30px 10px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+/* ---------- utilidades ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtM=new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS'});
+const money=n=>fmtM.format(n||0);
+const fmtDate=d=>new Date(d).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'});
+const num=s=>{s=String(s??'').trim().replace(/[^\d.,-]/g,'');const c=s.lastIndexOf(','),p=s.lastIndexOf('.');if(c>p)s=s.replace(/\./g,'').replace(',','.');else s=s.replace(/,/g,'');return parseFloat(s)||0};
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2800)}
+
+/* ---------- base de datos (IndexedDB) ---------- */
+let db;
+function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open('pedidos_app',1);r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('articles',{keyPath:'code'});d.createObjectStore('clients',{keyPath:'code'});d.createObjectStore('images');d.createObjectStore('orders',{keyPath:'id',autoIncrement:true});d.createObjectStore('users',{keyPath:'username'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+const rq=r=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const st=(s,m='readonly')=>db.transaction(s,m).objectStore(s);
+const getAll=s=>rq(st(s).getAll());
+const getOne=(s,k)=>rq(st(s).get(k));
+const put=(s,v,k)=>rq(st(s,'readwrite').put(v,k));
+const del=(s,k)=>rq(st(s,'readwrite').delete(k));
+const clear=s=>rq(st(s,'readwrite').clear());
+function bulkPut(s,items,kv){return new Promise((res,rej)=>{const t=db.transaction(s,'readwrite');const o=t.objectStore(s);items.forEach(i=>kv?o.put(i[1],i[0]):o.put(i));t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+
+/* ---------- estado ---------- */
+const S={user:null,tab:'orders',articles:[],clients:[],orders:[],users:[],q:{orders:'',articles:'',clients:'',newart:'',pickclient:''},page:{orders:50,articles:50,clients:50,newart:50,pickclient:50},cart:{client:null,items:{},notes:'',id:null,date:null},sheet:null,imp:null,tmpImg:null};
+const imgCache=new Map();
+async function getImg(code){if(imgCache.has(code))return imgCache.get(code);const v=(await getOne('images',code))||null;imgCache.set(code,v);return v}
+async function loadImgs(root=document){root.querySelectorAll('[data-img]').forEach(async el=>{const o=await getImg(el.dataset.img);if(o&&el.isConnected){el.outerHTML=`<img class="th" src="${o.d}" alt="">`}})}
+async function reload(){[S.articles,S.clients,S.orders,S.users]=await Promise.all([getAll('articles'),getAll('clients'),getAll('orders'),getAll('users')])}
+
+/* ---------- usuarios / login ---------- */
+async function hashPw(pw,salt){const data=new TextEncoder().encode(salt+':'+pw);if(window.crypto&&crypto.subtle){const h=await crypto.subtle.digest('SHA-256',data);return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}let h=5381;for(const b of data)h=((h<<5)+h+b)>>>0;return 'x'+h}
+const newSalt=()=>[...crypto.getRandomValues(new Uint8Array(8))].map(b=>b.toString(16).padStart(2,'0')).join('');
+async function mkUser(username,name,pw,role){const salt=newSalt();return{username:username.trim().toLowerCase(),name:name.trim()||username,role,salt,hash:await hashPw(pw,salt)}}
+function renderLogin(){
+  if(!S.users.length){
+    $('#app').innerHTML=`<div class="login"><h1>Pedidos</h1><p class="muted">Primer uso: creá el usuario administrador.</p>
+    <form data-submit="setup"><label>Usuario</label><input name="u" autocapitalize="none" required>
+    <label>Nombre</label><input name="n"><label>Contraseña</label><input name="p" type="password" required minlength="4">
+    <button class="btn blk">Crear y entrar</button></form></div>`;return}
+  $('#app').innerHTML=`<div class="login"><h1>Pedidos</h1><form data-submit="login"><label>Usuario</label><input name="u" autocapitalize="none" autocomplete="username" required>
+  <label>Contraseña</label><input name="p" type="password" autocomplete="current-password" required><button class="btn blk">Ingresar</button></form></div>`}
+async function doLogin(f){const u=S.users.find(x=>x.username===f.u.value.trim().toLowerCase());if(!u||u.hash!==await hashPw(f.p.value,u.salt)){toast('Usuario o contraseña incorrectos');return}S.user=u;try{localStorage.setItem('ped_session',u.username)}catch(e){}renderShell()}
+async function doSetup(f){const u=await mkUser(f.u.value,f.n.value,f.p.value,'admin');await put('users',u);await reload();S.user=u;try{localStorage.setItem('ped_session',u.username)}catch(e){}renderShell()}
+function logout(){S.user=null;resetCart();try{localStorage.removeItem('ped_session')}catch(e){}renderLogin()}
+const isAdmin=()=>S.user&&S.user.role==='admin';
+
+/* ---------- shell ---------- */
+function renderShell(){
+  const tabs=[['orders','📋','Pedidos'],['new','🛒','Nuevo'],['articles','📦','Artículos'],['clients','👥','Clientes'],['more','⚙️','Más']];
+  $('#app').innerHTML=`<header class="top"><b>Pedidos</b><span class="chip">${esc(S.user.name)}</span></header><main id="view"></main>
+  <nav class="tabs">${tabs.map(t=>`<button data-act="tab" data-tab="${t[0]}" class="${S.tab===t[0]?'on':''}"><span>${t[1]}</span>${t[2]}</button>`).join('')}</nav>`;
+  renderView()}
+function renderView(){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));window.scrollTo(0,0);({orders:viewOrders,new:viewNew,articles:viewArticles,clients:viewClients,more:viewMore})[S.tab]()}
+
+/* ---------- listas con búsqueda y paginado ---------- */
+function more(k,total,shown){return total>shown?`<button class="btn sec blk" data-act="more" data-k="${k}">Mostrar más (${total-shown})</button>`:''}
+
+/* ---------- PEDIDOS ---------- */
+function viewOrders(){$('#view').innerHTML=`<div class="bar"><input data-input="orders" placeholder="Buscar por Nº o cliente" value="${esc(S.q.orders)}"></div><div id="list"></div>`;fillOrders()}
+function fillOrders(){
+  const q=S.q.orders.toLowerCase();
+  const l=S.orders.filter(o=>isAdmin()||o.user===S.user.username).filter(o=>!q||String(o.id)===q||o.client.name.toLowerCase().includes(q)||o.client.code.toLowerCase().includes(q)).sort((a,b)=>b.id-a.id);
+  const sh=l.slice(0,S.page.orders);
+  $('#list').innerHTML=sh.length?sh.map(o=>`<div class="row" data-act="openOrder" data-id="${o.id}" style="cursor:pointer"><div class="info"><small>#${o.id} · ${fmtDate(o.date)}${isAdmin()?' · '+esc(o.userName||o.user):''}</small><div><b>${esc(o.client.name)}</b></div><small>${o.items.length} artículos</small></div><div class="pri">${money(o.total)}</div></div>`).join('')+more('orders',l.length,sh.length):`<div class="empty">Todavía no hay pedidos.<br>Tocá <b>Nuevo</b> para armar uno.</div>`}
+function orderSheet(id){
+  const o=S.orders.find(x=>x.id===id);if(!o)return;
+  openSheet('Pedido #'+o.id,`<div class="card"><b>${esc(o.client.name)}</b><br><span class="muted">Cód. ${esc(o.client.code)} · ${fmtDate(o.date)}</span>${o.notes?`<p>${esc(o.notes)}</p>`:''}</div>
+  ${o.items.map(i=>`<div class="row"><div class="info"><small>${esc(i.code)}</small><div>${esc(i.desc)}</div><small>${i.qty} × ${money(i.price)}</small></div><div class="pri">${money(i.qty*i.price)}</div></div>`).join('')}
+  <div class="row"><div class="info"><b>Total</b></div><div class="pri">${money(o.total)}</div></div>
+  <label style="display:flex;gap:8px;align-items:center;color:var(--tx)"><input type="checkbox" id="withImg" style="width:auto"> Incluir fotos en el PDF</label>
+  <div class="btns"><button class="btn" data-act="dlPDF" data-id="${o.id}">⬇ PDF</button><button class="btn" data-act="dlCSV" data-id="${o.id}">⬇ CSV</button>${navigator.canShare?`<button class="btn sec" data-act="sharePDF" data-id="${o.id}">Compartir</button>`:''}</div>
+  <div class="btns"><button class="btn sec" data-act="editOrder" data-id="${o.id}">Editar</button><button class="btn dan" data-act="delOrder" data-id="${o.id}">Eliminar</button></div>`)}
+
+/* ---------- NUEVO PEDIDO ---------- */
+function resetCart(){S.cart={client:null,items:{},notes:'',id:null,date:null}}
+function viewNew(){
+  const c=S.cart;
+  if(!c.client){
+    $('#view').innerHTML=`<h3 style="margin:4px 0 8px">1. Elegí el cliente</h3><div class="bar"><input data-input="pickclient" placeholder="Buscar cliente" value="${esc(S.q.pickclient)}"></div><div id="list"></div>`;fillPick();return}
+  $('#view').innerHTML=`${c.id?`<div class="card">Editando pedido #${c.id} <button class="btn dan" style="float:right;padding:4px 10px" data-act="cancelEdit">Cancelar</button></div>`:''}
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center"><div><small class="muted">Cliente</small><br><b>${esc(c.client.name)}</b></div><button class="btn sec" data-act="changeClient">Cambiar</button></div>
+  <div class="bar"><input data-input="newart" placeholder="Buscar artículo (código o descripción)" value="${esc(S.q.newart)}"></div><div id="list"></div>
+  <div class="sticky"><div class="tot"><small class="muted" id="cnt"></small><div class="pri" id="tot"></div></div><button class="btn" data-act="review">Revisar y guardar</button></div>`;
+  fillArts();updateBar()}
+function fillPick(){
+  const q=S.q.pickclient.toLowerCase();
+  const l=S.clients.filter(c=>!q||c.code.toLowerCase().includes(q)||c.name.toLowerCase().includes(q));
+  const sh=l.slice(0,S.page.pickclient);
+  $('#list').innerHTML=sh.length?sh.map(c=>`<div class="row" data-act="pickClient" data-code="${esc(c.code)}" style="cursor:pointer"><div class="info"><small>${esc(c.code)}</small><div><b>${esc(c.name)}</b></div><small>${esc(c.address||'')}</small></div></div>`).join('')+more('pickclient',l.length,sh.length):`<div class="empty">${S.clients.length?'Sin resultados':'No hay clientes. Importalos desde la pestaña Clientes (administrador).'}</div>`}
+const qtyHtml=code=>{const i=S.cart.items[code];return i?`<button data-act="dec" data-code="${esc(code)}">−</button><input type="text" inputmode="decimal" value="${i.qty}" data-qty="${esc(code)}"><button data-act="inc" data-code="${esc(code)}">+</button>`:`<button class="add" data-act="inc" data-code="${esc(code)}">Agregar</button>`};
+function fillArts(){
+  const q=S.q.newart.toLowerCase();
+  const l=S.articles.filter(a=>!q||a.code.toLowerCase().includes(q)||a.desc.toLowerCase().includes(q));
+  const sh=l.slice(0,S.page.newart);
+  $('#list').innerHTML=sh.length?sh.map(a=>`<div class="row art" data-code="${esc(a.code)}"><div class="th" data-img="${esc(a.code)}">📦</div><div class="info"><small>${esc(a.code)}</small><div>${esc(a.desc)}</div><span class="pri">${money(a.price)}</span></div><div class="qty">${qtyHtml(a.code)}</div></div>`).join('')+more('newart',l.length,sh.length):`<div class="empty">${S.articles.length?'Sin resultados':'No hay artículos cargados.'}</div>`;
+  loadImgs($('#list'))}
+function cartTotals(){const v=Object.values(S.cart.items);return{n:v.length,total:v.reduce((s,i)=>s+i.qty*i.price,0)}}
+function updateBar(){const t=cartTotals();const c=$('#cnt');if(c){c.textContent=t.n+' artículos';$('#tot').textContent=money(t.total)}}
+function setQty(code,q){
+  if(q<=0)delete S.cart.items[code];
+  else{const a=S.articles.find(x=>x.code===code);const cur=S.cart.items[code];S.cart.items[code]={qty:q,desc:cur?cur.desc:a.desc,price:cur?cur.price:a.price}}
+  const row=[...document.querySelectorAll('.row.art')].find(r=>r.dataset.code===code);
+  if(row)row.querySelector('.qty').innerHTML=qtyHtml(code);
+  updateBar();if(S.sheet==='review')renderReview()}
+function renderReview(){
+  const c=S.cart,t=cartTotals();
+  const lines=Object.entries(c.items);
+  $('#sheetBody').innerHTML=`<div class="card"><b>${esc(c.client.name)}</b></div>
+  ${lines.length?lines.map(([code,i])=>`<div class="row"><div class="info"><small>${esc(code)}</small><div>${esc(i.desc)}</div><small>${money(i.price)} c/u · <b>${money(i.qty*i.price)}</b></small></div><div class="qty"><button data-act="dec" data-code="${esc(code)}">−</button><input type="text" inputmode="decimal" value="${i.qty}" data-qty="${esc(code)}"><button data-act="inc" data-code="${esc(code)}">+</button></div></div>`).join(''):'<div class="empty">El pedido está vacío</div>'}
+  <div class="row"><div class="info"><b>Total</b></div><div class="pri">${money(t.total)}</div></div>
+  <label>Observaciones</label><textarea id="notes" rows="2">${esc(c.notes)}</textarea>
+  <button class="btn blk" data-act="saveOrder">${c.id?'Guardar cambios':'Guardar pedido'}</button>`}
+async function saveOrder(){
+  const c=S.cart;const notes=$('#notes')?$('#notes').value:c.notes;
+  const items=Object.entries(c.items).map(([code,i])=>({code,desc:i.desc,price:i.price,qty:i.qty}));
+  if(!items.length){toast('Agregá al menos un artículo');return}
+  const o={client:{code:c.client.code,name:c.client.name},items,total:items.reduce((s,i)=>s+i.qty*i.price,0),notes,user:S.user.username,userName:S.user.name,date:c.date||Date.now()};
+  if(c.id){o.id=c.id;o.user=(S.orders.find(x=>x.id===c.id)||o).user;o.updated=Date.now()}
+  const id=await put('orders',o);
+  S.orders=await getAll('orders');resetCart();S.q.newart='';closeSheet();S.tab='orders';renderShell();toast('Pedido #'+id+' guardado');orderSheet(id)}
+
+/* ---------- ARTÍCULOS ---------- */
+function viewArticles(){
+  $('#view').innerHTML=`${isAdmin()?`<div class="btns"><button class="btn" data-act="newArticle">+ Nuevo</button><button class="btn sec" data-act="import" data-kind="articles">Importar DBF/CSV</button><button class="btn sec" data-act="bulkImages">Fotos en lote</button></div>`:''}
+  <div class="bar"><input data-input="articles" placeholder="Buscar artículo" value="${esc(S.q.articles)}"></div><div class="muted" id="acount" style="margin-bottom:8px"></div><div id="list"></div>`;fillArticles()}
+function fillArticles(){
+  const q=S.q.articles.toLowerCase();
+  const l=S.articles.filter(a=>!q||a.code.toLowerCase().includes(q)||a.desc.toLowerCase().includes(q));
+  const sh=l.slice(0,S.page.articles);
+  $('#acount').textContent=l.length+' artículos';
+  $('#list').innerHTML=sh.length?sh.map(a=>`<div class="row" ${isAdmin()?`data-act="editArticle" data-code="${esc(a.code)}" style="cursor:pointer"`:''}><div class="th" data-img="${esc(a.code)}">📦</div><div class="info"><small>${esc(a.code)}</small><div>${esc(a.desc)}</div></div><div class="pri">${money(a.price)}</div></div>`).join('')+more('articles',l.length,sh.length):`<div class="empty">No hay artículos.${isAdmin()?'<br>Importá un DBF/CSV o creá uno nuevo.':''}</div>`;
+  loadImgs($('#list'))}
+async function articleSheet(code){
+  const a=S.articles.find(x=>x.code===code)||{code:'',desc:'',price:0};const img=code?await getImg(code):null;
+  S.tmpImg=img?{keep:true}:null;
+  openSheet(code?'Editar artículo':'Nuevo artículo',`<form data-submit="saveArticle" data-old="${esc(code||'')}">
+  <label>Código</label><input name="code" value="${esc(a.code)}" ${code?'readonly':''} required>
+  <label>Descripción</label><input name="desc" value="${esc(a.desc)}" required>
+  <label>Precio</label><input name="price" inputmode="decimal" value="${a.price||''}" required>
+  <label>Foto</label><input type="file" accept="image/*" id="artImg"><div id="imgPv">${img?`<img class="pv" src="${img.d}">`:''}</div>
+  ${img?'<button type="button" class="btn dan" data-act="rmImg">Quitar foto</button>':''}
+  <button class="btn blk">Guardar</button></form>${code?`<button class="btn dan blk" data-act="delArticle" data-code="${esc(code)}">Eliminar artículo</button>`:''}`)}
+function resizeImage(file,max=500){return new Promise((res,rej)=>{const url=URL.createObjectURL(file);const im=new Image();im.onload=()=>{const s=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);res({d:c.toDataURL('image/jpeg',.72),w:c.width,h:c.height})};im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('imagen inválida'))};im.src=url})}
+async function saveArticle(f){
+  const code=f.code.value.trim();if(!code)return;
+  const old=f.dataset.old;
+  if(!old&&S.articles.some(a=>a.code===code)){toast('Ese código ya existe');return}
+  await put('articles',{code,desc:f.desc.value.trim(),price:num(f.price.value)});
+  if(S.tmpImg&&S.tmpImg.d){await put('images',S.tmpImg,code);imgCache.set(code,S.tmpImg)}
+  else if(S.tmpImg===null){await del('images',code);imgCache.delete(code)}
+  S.articles=await getAll('articles');closeSheet();viewArticles();toast('Guardado')}
+async function bulkImages(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;
+  inp.onchange=async()=>{
+    const map=new Map(S.articles.map(a=>[a.code.toLowerCase(),a.code]));let ok=0,no=0;
+    for(const f of inp.files){const base=f.name.replace(/\.[^.]+$/,'').trim().toLowerCase();const code=map.get(base);if(!code){no++;continue}
+      try{const o=await resizeImage(f);await put('images',o,code);imgCache.set(code,o);ok++}catch(e){no++}
+      if((ok+no)%10===0)toast(`Procesando ${ok+no}/${inp.files.length}…`)}
+    toast(`Fotos asignadas: ${ok}. Sin coincidencia: ${no}`);viewArticles()};
+  inp.click()}
+
+/* ---------- CLIENTES ---------- */
+function viewClients(){
+  $('#view').innerHTML=`${isAdmin()?`<div class="btns"><button class="btn" data-act="newClient">+ Nuevo</button><button class="btn sec" data-act="import" data-kind="clients">Importar DBF/CSV</button></div>`:''}
+  <div class="bar"><input data-input="clients" placeholder="Buscar cliente" value="${esc(S.q.clients)}"></div><div class="muted" id="ccount" style="margin-bottom:8px"></div><div id="list"></div>`;fillClients()}
+function fillClients(){
+  const q=S.q.clients.toLowerCase();
+  const l=S.clients.filter(c=>!q||c.code.toLowerCase().includes(q)||c.name.toLowerCase().includes(q));
+  const sh=l.slice(0,S.page.clients);
+  $('#ccount').textContent=l.length+' clientes';
+  $('#list').innerHTML=sh.length?sh.map(c=>`<div class="row" ${isAdmin()?`data-act="editClient" data-code="${esc(c.code)}" style="cursor:pointer"`:''}><div class="info"><small>${esc(c.code)}</small><div><b>${esc(c.name)}</b></div><small>${esc([c.address,c.phone,c.cuit].filter(Boolean).join(' · '))}</small></div></div>`).join('')+more('clients',l.length,sh.length):`<div class="empty">No hay clientes.</div>`}
+function clientSheet(code){
+  const c=S.clients.find(x=>x.code===code)||{code:'',name:'',address:'',phone:'',cuit:''};
+  openSheet(code?'Editar cliente':'Nuevo cliente',`<form data-submit="saveClient" data-old="${esc(code||'')}">
+  <label>Código</label><input name="code" value="${esc(c.code)}" ${code?'readonly':''} required>
+  <label>Nombre / Razón social</label><input name="name" value="${esc(c.name)}" required>
+  <label>Domicilio</label><input name="address" value="${esc(c.address)}">
+  <label>Teléfono</label><input name="phone" value="${esc(c.phone)}">
+  <label>CUIT</label><input name="cuit" value="${esc(c.cuit)}">
+  <button class="btn blk">Guardar</button></form>${code?`<button class="btn dan blk" data-act="delClient" data-code="${esc(code)}">Eliminar cliente</button>`:''}`)}
+async function saveClient(f){
+  const code=f.code.value.trim();const old=f.dataset.old;
+  if(!old&&S.clients.some(c=>c.code===code)){toast('Ese código ya existe');return}
+  await put('clients',{code,name:f.name.value.trim(),address:f.address.value.trim(),phone:f.phone.value.trim(),cuit:f.cuit.value.trim()});
+  S.clients=await getAll('clients');closeSheet();viewClients();toast('Guardado')}
+
+/* ---------- MÁS ---------- */
+function viewMore(){
+  $('#view').innerHTML=`<div class="card"><b>${esc(S.user.name)}</b><br><span class="muted">Usuario: ${esc(S.user.username)} · ${isAdmin()?'Administrador':'Vendedor'}</span></div>
+  <button class="btn sec blk" data-act="myPwd">Cambiar mi contraseña</button>
+  ${isAdmin()?`<button class="btn sec blk" data-act="users">Usuarios</button><button class="btn sec blk" data-act="backup">Exportar copia de seguridad</button><button class="btn sec blk" data-act="restore">Restaurar copia de seguridad</button>
+  <button class="btn dan blk" data-act="clearArticles">Vaciar artículos</button><button class="btn dan blk" data-act="clearClients">Vaciar clientes</button>`:''}
+  <button class="btn blk" style="margin-top:20px" data-act="logout">Cerrar sesión</button>
+  <p class="muted" style="text-align:center">Los datos se guardan en este dispositivo.<br>Hacé copias de seguridad con regularidad.</p>`}
+function pwdSheet(){openSheet('Cambiar contraseña',`<form data-submit="myPwd"><label>Contraseña actual</label><input name="o" type="password" required><label>Nueva contraseña</label><input name="n" type="password" minlength="4" required><button class="btn blk">Guardar</button></form>`)}
+async function changePwd(f){if(S.user.hash!==await hashPw(f.o.value,S.user.salt)){toast('Contraseña actual incorrecta');return}const u={...S.user,salt:newSalt()};u.hash=await hashPw(f.n.value,u.salt);await put('users',u);S.user=u;await reload();closeSheet();toast('Contraseña actualizada')}
+function usersSheet(){
+  openSheet('Usuarios',`${S.users.map(u=>`<div class="row"><div class="info"><b>${esc(u.name)}</b><br><small>${esc(u.username)} · ${u.role==='admin'?'Administrador':'Vendedor'}</small></div><button class="btn sec" data-act="resetPwd" data-u="${esc(u.username)}" style="padding:6px 10px">Clave</button>${u.username!==S.user.username?`<button class="btn dan" data-act="delUser" data-u="${esc(u.username)}" style="padding:6px 10px">✕</button>`:''}</div>`).join('')}
+  <h4>Agregar usuario</h4><form data-submit="addUser"><label>Usuario</label><input name="u" autocapitalize="none" required><label>Nombre</label><input name="n"><label>Contraseña</label><input name="p" type="password" minlength="4" required>
+  <label>Rol</label><select name="r"><option value="seller">Vendedor</option><option value="admin">Administrador</option></select><button class="btn blk">Agregar</button></form>`)}
+async function addUser(f){const un=f.u.value.trim().toLowerCase();if(S.users.some(u=>u.username===un)){toast('Ese usuario ya existe');return}await put('users',await mkUser(un,f.n.value,f.p.value,f.r.value));await reload();usersSheet();toast('Usuario agregado')}
+async function backup(){
+  const data={v:1,articles:S.articles,clients:S.clients,orders:S.orders,users:S.users,images:[]};
+  const keys=await rq(st('images').getAllKeys());for(const k of keys)data.images.push([k,await getOne('images',k)]);
+  download(new Blob([JSON.stringify(data)],{type:'application/json'}),'pedidos-backup-'+new Date().toISOString().slice(0,10)+'.json')}
+function restore(){
+  const inp=document.createElement('input');inp.type='file';
+  inp.onchange=async()=>{try{const d=JSON.parse(await inp.files[0].text());if(!confirm('Esto reemplaza TODOS los datos actuales. ¿Continuar?'))return;
+    for(const s of['articles','clients','orders','users','images'])await clear(s);
+    await bulkPut('articles',d.articles||[]);await bulkPut('clients',d.clients||[]);await bulkPut('orders',d.orders||[]);await bulkPut('users',d.users||[]);await bulkPut('images',d.images||[],true);
+    imgCache.clear();await reload();const me=S.users.find(u=>u.username===S.user.username);if(!me){logout();return}S.user=me;renderShell();toast('Copia restaurada')}catch(e){toast('Archivo inválido')}};
+  inp.click()}
+
+/* ---------- hojas modales ---------- */
+function openSheet(title,html){closeSheet();S.sheet=title==='Revisar pedido'?'review':title;const o=document.createElement('div');o.className='ov';o.id='ov';o.innerHTML=`<div class="sheet"><div class="sh-h"><b>${esc(title)}</b><button data-act="closeSheet">✕</button></div><div class="sh-b" id="sheetBody">${html}</div></div>`;document.body.appendChild(o)}
+function closeSheet(){const o=$('#ov');if(o)o.remove();S.sheet=null}
+
+/* ---------- IMPORTACIÓN ---------- */
+const CP850='ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜø£Ø×ƒáíóúñÑªº¿®¬½¼¡«»░▒▓│┤ÁÂÀ©╣║╗╝¢¥┐└┴┬├─┼ãÃ╚╔╩╦╠═╬¤ðÐÊËÈıÍÎÏ┘┌█▄¦Ì▀ÓßÔÒõÕµþÞÚÛÙýÝ¯´­±‗¾¶§÷¸°¨·¹³²■ ';
+function decodeBytes(b,enc){
+  if(enc==='cp850'){let s='';for(let i=0;i<b.length;i++){const c=b[i];s+=c<128?String.fromCharCode(c):CP850[c-128]}return s}
+  return new TextDecoder(enc).decode(b)}
+function parseDBF(buf,enc){
+  const dv=new DataView(buf),u8=new Uint8Array(buf);
+  if(buf.byteLength<33)throw new Error('archivo demasiado chico');
+  const n=dv.getUint32(4,true),hl=dv.getUint16(8,true),rl=dv.getUint16(10,true),ld=u8[29];
+  if(enc==='auto')enc=(ld===3||ld===0x57||ld===0x4D||ld===0x65)?'windows-1252':'cp850';
+  const fields=[];
+  for(let p=32;p+32<=hl&&u8[p]!==0x0D;p+=32){let name='';for(let i=0;i<11&&u8[p+i];i++)name+=String.fromCharCode(u8[p+i]);fields.push({name:name.trim(),type:String.fromCharCode(u8[p+11]),len:u8[p+16]})}
+  if(!fields.length)throw new Error('no parece un DBF válido');
+  const rows=[];let off=hl;
+  for(let r=0;r<n;r++,off+=rl){
+    if(off+rl>buf.byteLength)break;if(u8[off]===0x2A)continue;
+    let p=off+1;const row=[];
+    for(const f of fields){
+      let v;
+      if(f.type==='I')v=String(dv.getInt32(p,true));
+      else if(f.type==='B')v=String(dv.getFloat64(p,true));
+      else if(f.type==='Y')v=String(Number(dv.getBigInt64(p,true))/10000);
+      else v=decodeBytes(u8.subarray(p,p+f.len),enc).replace(/\0/g,'').trim();
+      row.push(v);p+=f.len}
+    rows.push(row)}
+  return{fields:fields.map(f=>f.name),rows}}
+function parseCSV(text){
+  text=text.replace(/^﻿/,'');
+  const first=text.split(/\r?\n/)[0]||'';
+  const d=[';',',','\t','|'].map(c=>[c,first.split(c).length]).sort((a,b)=>b[1]-a[1])[0][0];
+  const rows=[];let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
+    else if(c==='"')q=true;
+    else if(c===d){row.push(cur);cur=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cur);cur='';if(row.some(x=>x.trim()!==''))rows.push(row);row=[]}
+    else cur+=c}
+  row.push(cur);if(row.some(x=>x.trim()!==''))rows.push(row);
+  if(!rows.length)throw new Error('archivo vacío');
+  return{fields:rows[0].map(x=>x.trim()),rows:rows.slice(1).map(r=>r.map(x=>x.trim()))}}
+function decodeText(buf,enc){
+  if(enc==='auto'){try{return new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch(e){return new TextDecoder('windows-1252').decode(buf)}}
+  return decodeBytes(new Uint8Array(buf),enc)}
+const TARGETS={articles:[['code','Código',1],['desc','Descripción',1],['price','Precio',1]],clients:[['code','Código',1],['name','Nombre / Razón social',1],['address','Domicilio',0],['phone','Teléfono',0],['cuit','CUIT',0]]};
+const GUESS={code:/^(cod|codigo|código|art|id|nro|num|cli)/i,desc:/desc|nombre|detalle|articulo|artículo/i,price:/prec|pvp|lista|importe|pr_|^pre/i,name:/nom|raz|razon|cliente/i,address:/dom|dir/i,phone:/tel/i,cuit:/cuit|cuil|doc/i};
+function guessMap(){const I=S.imp,used=new Set();I.map={};
+  for(const[k]of TARGETS[I.kind]){let idx=-1;I.parsed.fields.forEach((f,i)=>{if(idx<0&&!used.has(i)&&GUESS[k].test(f))idx=i});if(idx>=0)used.add(idx);I.map[k]=idx}}
+function parseImp(guess){const I=S.imp;I.parsed=I.isDbf?parseDBF(I.buf,I.enc):parseCSV(decodeText(I.buf,I.enc));if(guess||!I.map)guessMap()}
+function mapRows(){
+  const I=S.imp,m=I.map,g=(r,k)=>m[k]>=0?(r[m[k]]??''):'';const out=[];
+  for(const r of I.parsed.rows){const code=g(r,'code').trim();if(!code)continue;
+    if(I.kind==='articles')out.push({code,desc:g(r,'desc').trim(),price:num(g(r,'price'))});
+    else out.push({code,name:g(r,'name').trim(),address:g(r,'address').trim(),phone:g(r,'phone').trim(),cuit:g(r,'cuit').trim()})}
+  return out}
+function pickFile(kind){
+  const inp=document.createElement('input');inp.type='file';
+  inp.onchange=async()=>{const f=inp.files[0];if(!f)return;
+    const buf=await f.arrayBuffer();
+    S.imp={kind,buf,name:f.name,isDbf:/\.dbf$/i.test(f.name),enc:'auto',map:null,replace:false};
+    try{parseImp(true)}catch(e){toast('No se pudo leer: '+e.message);return}
+    openSheet('Importar '+(kind==='articles'?'artículos':'clientes'),'');renderImport()};
+  inp.click()}
+function renderImport(){
+  const I=S.imp,p=I.parsed,T=TARGETS[I.kind];
+  const opts=sel=>`<option value="-1">— ninguno —</option>`+p.fields.map((f,i)=>`<option value="${i}"${sel===i?' selected':''}>${esc(f)}</option>`).join('');
+  const prev=mapRows().slice(0,4);
+  $('#sheetBody').innerHTML=`<div class="muted">${esc(I.name)} · ${p.rows.length} filas · ${I.isDbf?'DBF':'CSV'}</div>
+  <label>Codificación de caracteres (cambiala si ves acentos raros)</label>
+  <select data-enc>${[['auto','Automática'],['cp850','DOS (CP850)'],['windows-1252','Windows (1252)'],['utf-8','UTF-8']].map(e=>`<option value="${e[0]}"${I.enc===e[0]?' selected':''}>${e[1]}</option>`).join('')}</select>
+  <h4 style="margin-bottom:0">Asigná los campos</h4>
+  ${T.map(t=>`<label>${t[1]}${t[2]?' *':''}</label><select data-map="${t[0]}">${opts(I.map[t[0]])}</select>`).join('')}
+  <h4 style="margin-bottom:4px">Vista previa</h4>
+  <div style="overflow:auto"><table><tr>${T.map(t=>`<th>${t[1]}</th>`).join('')}</tr>${prev.map(r=>`<tr>${T.map(t=>`<td>${esc(t[0]==='price'?money(r.price):r[t[0]])}</td>`).join('')}</tr>`).join('')}</table></div>
+  <label style="display:flex;gap:8px;align-items:center;color:var(--tx)"><input type="checkbox" style="width:auto" data-replace ${I.replace?'checked':''}> Reemplazar todo lo existente (si no, se agrega y se actualiza por código)</label>
+  <button class="btn blk" data-act="doImport">Importar ${mapRows().length} registros</button>`}
+async function doImport(){
+  const I=S.imp,T=TARGETS[I.kind];
+  const miss=T.filter(t=>t[2]&&I.map[t[0]]<0);if(miss.length){toast('Falta asignar: '+miss.map(t=>t[1]).join(', '));return}
+  const recs=mapRows();if(!recs.length){toast('No hay filas válidas');return}
+  toast('Importando…');
+  if(I.replace)await clear(I.kind);
+  await bulkPut(I.kind,recs);await reload();closeSheet();S.imp=null;
+  toast('Importados '+recs.length+' registros');renderView()}
+
+/* ---------- EXPORTAR ---------- */
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+const csvEsc=v=>{v=String(v??'');return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+function orderCSV(o){
+  const n=x=>String(x).replace('.',',');
+  const h=['Pedido','Fecha','Cód. cliente','Cliente','Cód. artículo','Descripción','Cantidad','Precio','Subtotal'];
+  const rows=o.items.map(i=>[o.id,fmtDate(o.date),o.client.code,o.client.name,i.code,i.desc,n(i.qty),n(i.price.toFixed(2)),n((i.qty*i.price).toFixed(2))]);
+  return new Blob(['﻿'+[h,...rows].map(r=>r.map(csvEsc).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'})}
+async function orderPDF(o,withImg){
+  if(!window.jspdf)throw new Error('No se cargó el generador de PDF (se necesita internet).');
+  const doc=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
+  const M=12,W=210;let y=M;
+  const cx=withImg?28:12,dx=withImg?50:36,dw=withImg?84:98;
+  const head=()=>{doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setFillColor(15,118,110);doc.setTextColor(255);doc.rect(M,y,W-2*M,7,'F');
+    doc.text('Código',cx,y+4.8);doc.text('Descripción',dx,y+4.8);doc.text('Cant.',146,y+4.8,{align:'right'});doc.text('Precio',172,y+4.8,{align:'right'});doc.text('Subtotal',W-M-1,y+4.8,{align:'right'});doc.setTextColor(0);y+=9};
+  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.text('Pedido Nº '+o.id,M,y+5);
+  doc.setFontSize(10);doc.setFont('helvetica','normal');doc.text(fmtDate(o.date),W-M,y+5,{align:'right'});y+=11;
+  doc.setFont('helvetica','bold');doc.text('Cliente: '+o.client.name,M,y);y+=5;
+  doc.setFont('helvetica','normal');doc.text('Código: '+o.client.code+'    Vendedor: '+(o.userName||o.user),M,y);y+=5;
+  if(o.notes){const t=doc.splitTextToSize('Obs.: '+o.notes,W-2*M);doc.text(t,M,y);y+=t.length*4.5}
+  y+=3;head();doc.setFontSize(9);
+  for(const i of o.items){
+    const lines=doc.splitTextToSize(i.desc||'',dw).slice(0,2);
+    const rh=Math.max(withImg?15:0,lines.length*4+3.5);
+    if(y+rh>278){doc.addPage();y=M;head();doc.setFontSize(9)}
+    if(withImg){const im=await getImg(i.code);if(im){const s=Math.min(13/im.w,13/im.h);try{doc.addImage(im.d,'JPEG',M+1,y+1,im.w*s,im.h*s)}catch(e){}}}
+    doc.setFont('helvetica','normal');
+    doc.text(String(i.code).slice(0,18),cx,y+4.5);doc.text(lines,dx,y+4.5);
+    doc.text(String(i.qty).replace('.',','),146,y+4.5,{align:'right'});doc.text(money(i.price),172,y+4.5,{align:'right'});doc.text(money(i.qty*i.price),W-M-1,y+4.5,{align:'right'});
+    y+=rh;doc.setDrawColor(220);doc.line(M,y,W-M,y)}
+  y+=6;if(y>280){doc.addPage();y=M}
+  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('TOTAL: '+money(o.total),W-M,y,{align:'right'});
+  const pc=doc.getNumberOfPages();doc.setFontSize(8);doc.setFont('helvetica','normal');
+  for(let p=1;p<=pc;p++){doc.setPage(p);doc.text(p+' / '+pc,W/2,292,{align:'center'})}
+  return doc}
+
+/* ---------- eventos ---------- */
+const A={
+  tab:d=>{S.tab=d.tab;renderView()},
+  logout,
+  closeSheet,
+  more:d=>{S.page[d.k]+=50;({orders:fillOrders,articles:fillArticles,clients:fillClients,newart:fillArts,pickclient:fillPick})[d.k]()},
+  openOrder:d=>orderSheet(+d.id),
+  pickClient:d=>{S.cart.client=S.clients.find(c=>c.code===d.code);S.q.newart='';viewNew()},
+  changeClient:()=>{S.cart.client=null;viewNew()},
+  cancelEdit:()=>{resetCart();viewNew()},
+  inc:d=>{const i=S.cart.items[d.code];setQty(d.code,(i?i.qty:0)+1)},
+  dec:d=>{const i=S.cart.items[d.code];if(i)setQty(d.code,i.qty-1)},
+  review:()=>{if(!Object.keys(S.cart.items).length){toast('Agregá al menos un artículo');return}openSheet('Revisar pedido','');renderReview()},
+  saveOrder,
+  editOrder:d=>{const o=S.orders.find(x=>x.id===+d.id);resetCart();S.cart={client:S.clients.find(c=>c.code===o.client.code)||o.client,items:Object.fromEntries(o.items.map(i=>[i.code,{qty:i.qty,desc:i.desc,price:i.price}])),notes:o.notes||'',id:o.id,date:o.date};closeSheet();S.tab='new';renderShell()},
+  delOrder:async d=>{if(!confirm('¿Eliminar el pedido #'+d.id+'?'))return;await del('orders',+d.id);S.orders=await getAll('orders');closeSheet();viewOrders()},
+  dlPDF:async d=>{const o=S.orders.find(x=>x.id===+d.id);try{toast('Generando PDF…');const doc=await orderPDF(o,$('#withImg')&&$('#withImg').checked);doc.save('pedido-'+o.id+'.pdf')}catch(e){toast(e.message)}},
+  sharePDF:async d=>{const o=S.orders.find(x=>x.id===+d.id);try{const doc=await orderPDF(o,$('#withImg')&&$('#withImg').checked);const f=new File([doc.output('blob')],'pedido-'+o.id+'.pdf',{type:'application/pdf'});if(navigator.canShare({files:[f]}))await navigator.share({files:[f],title:'Pedido '+o.id});else doc.save(f.name)}catch(e){if(e.name!=='AbortError')toast(e.message)}},
+  dlCSV:d=>{const o=S.orders.find(x=>x.id===+d.id);download(orderCSV(o),'pedido-'+o.id+'.csv')},
+  newArticle:()=>articleSheet(''),
+  editArticle:d=>articleSheet(d.code),
+  rmImg:()=>{S.tmpImg=null;$('#imgPv').innerHTML='';toast('La foto se quitará al guardar')},
+  delArticle:async d=>{if(!confirm('¿Eliminar el artículo?'))return;await del('articles',d.code);await del('images',d.code);imgCache.delete(d.code);S.articles=await getAll('articles');closeSheet();viewArticles()},
+  bulkImages,
+  import:d=>pickFile(d.kind),
+  doImport,
+  newClient:()=>clientSheet(''),
+  editClient:d=>clientSheet(d.code),
+  delClient:async d=>{if(!confirm('¿Eliminar el cliente?'))return;await del('clients',d.code);S.clients=await getAll('clients');closeSheet();viewClients()},
+  myPwd:pwdSheet,
+  users:usersSheet,
+  resetPwd:async d=>{const p=prompt('Nueva contraseña para '+d.u);if(!p||p.length<4)return;const u=S.users.find(x=>x.username===d.u);const n={...u,salt:newSalt()};n.hash=await hashPw(p,n.salt);await put('users',n);await reload();if(n.username===S.user.username)S.user=n;toast('Contraseña actualizada')},
+  delUser:async d=>{if(!confirm('¿Eliminar al usuario '+d.u+'?'))return;await del('users',d.u);await reload();usersSheet()},
+  backup,restore,
+  clearArticles:async()=>{if(!confirm('¿Vaciar TODOS los artículos y fotos?'))return;await clear('articles');await clear('images');imgCache.clear();await reload();toast('Artículos vaciados')},
+  clearClients:async()=>{if(!confirm('¿Vaciar TODOS los clientes?'))return;await clear('clients');await reload();toast('Clientes vaciados')}
+};
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const f=A[b.dataset.act];if(f)f(b.dataset,b,e)});
+document.addEventListener('submit',async e=>{
+  const f=e.target.closest('form[data-submit]');if(!f)return;e.preventDefault();
+  try{await({login:doLogin,setup:doSetup,saveArticle,saveClient,myPwd:changePwd,addUser})[f.dataset.submit](f)}catch(err){toast('Error: '+err.message)}});
+document.addEventListener('input',e=>{
+  const k=e.target.dataset.input;if(!k)return;
+  S.q[k]=e.target.value;S.page[k]=50;({orders:fillOrders,articles:fillArticles,clients:fillClients,newart:fillArts,pickclient:fillPick})[k]()});
+document.addEventListener('change',async e=>{
+  const t=e.target;
+  if(t.dataset.qty!==undefined){const q=num(t.value);setQty(t.dataset.qty,q);return}
+  if(t.dataset.map){S.imp.map[t.dataset.map]=+t.value;renderImport();return}
+  if(t.dataset.enc!==undefined){S.imp.enc=t.value;try{parseImp(false)}catch(err){toast(err.message)}renderImport();return}
+  if(t.dataset.replace!==undefined){S.imp.replace=t.checked;return}
+  if(t.id==='artImg'&&t.files[0]){try{S.tmpImg=await resizeImage(t.files[0]);$('#imgPv').innerHTML=`<img class="pv" src="${S.tmpImg.d}">`}catch(err){toast('No se pudo leer la imagen')}}});
+
+/* ---------- inicio ---------- */
+(async()=>{
+  try{db=await openDB()}catch(e){$('#app').innerHTML='<div class="login"><h2>No se puede guardar datos</h2><p>Este navegador bloquea el almacenamiento local (¿modo privado?). Abrí la app en una pestaña normal.</p></div>';return}
+  await reload();
+  let s=null;try{s=localStorage.getItem('ped_session')}catch(e){}
+  const u=s&&S.users.find(x=>x.username===s);
+  if(u){S.user=u;renderShell()}else renderLogin()
+})();
+</script>
+</body>
+</html>
